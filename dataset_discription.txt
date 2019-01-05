@@ -1,0 +1,13 @@
+﻿Dataset has been taken from https://www.kaggle.com/ludobenistant/hr-analytics/data
+
+Dataset contains the following observations:
+- satisfaction_level: A numeric evaluation, maybe written by the employee.
+- last_evaluation: A numeric evaluation, maybe graded by the employee’s manager.
+- number_project: A integer - the number of projects the employee has been involved.
+- average_monthly_hours: The number of hours they work (billed) in the month.
+- time_spend_company: An integer value, length of service of the employee.
+- Work_accident: Boolean value, perhaps whether or not they had an accident.
+- left: a boolean value, leave or not.
+- promoted_last_5years: A boolean value, whether there were any promotion in last 5 years.
+- Division: this is a department(teams), as to were the employees are assigned.
+- salary: A 3-level pay grade indicator (low, medium, high)
