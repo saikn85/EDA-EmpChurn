@@ -1,0 +1,921 @@
+---
+title: "Why are Employees Leaving"
+author: "Kartik Nanduri"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    toc: true
+    toc_depth: 1
+    toc_float: true
+    theme: lumen
+    highlight: textmate
+---
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, packages, include=FALSE}
+
+# install the following packages, uncomment while running the file, if needed.
+#install.packages("tidyverse", dependencies = T)
+#install.packages("knitr", dependencies = T)
+#install.packages("ggalt", dependencies = T)
+#install.packages("plyr", dependencies = T)
+
+knitr::opts_chunk$set(fig.width=5,fig.height=3,fig.path='Figs/',
+                      fig.align='center',tidy=TRUE,
+                      echo=FALSE,warning=FALSE,message=FALSE)
+
+# Loading packages
+library("tidyverse") # data manipulation library
+library("knitr") # library for converting .rmd to various file formats
+library("ggalt") # additional plot functions
+```
+
+```{r Load_data, echo=FALSE, message=FALSE, warning=FALSE, include=FALSE, paged.print=TRUE}
+# Load the Data
+emp_churn <- read_csv("why_are_employees_leaving.csv")
+```
+
+# Introduction
+
+Employee attrition or churn can be defined as the process of an intellectual asset leaving from an organization, through regular means, such as retirement and resignation, the loss of customers or clients to old age or to growing out of the company's target demographic. This type of reduction in staff is one way a company can decrease labor costs.
+
+# Level - I Analysis
+
+#### A quick look on dataset.
+
+a. First six rows.
+
+```{r head, echo=FALSE, message=FALSE, warning=FALSE, paged.print=TRUE}
+# first six rows
+head(emp_churn)
+```
+
+b. Last six rows.
+  
+```{r tail, echo=FALSE, message=FALSE, warning=FALSE}
+# last six rows
+tail(emp_churn)
+```
+
+c. Checking for null/missing values
+  
+```{r echo=FALSE, message=FALSE, warning=FALSE, missing_vals}
+# checking each column/attribute if they have missing values
+sapply(emp_churn, function(x){
+  sum(is.na(x))
+  })
+```
+
+#### Structure of the dataset
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, str_1}
+# structure of the dataset
+str(emp_churn)
+```
+
+- We see that there are inconsistencies in column names as well as their values.
+- Let's remove these inconsistencies.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, clean_dataset}
+# cleaning the dataset
+emp_churn <- emp_churn %>%
+  rename(work_acc = "Work_accident",
+         division = "Division",
+         promoted_last_5yrs = "promotion_last_5years")
+emp_churn <- emp_churn %>%
+  mutate(left = ifelse(left == 1, "yes", "no"),
+         work_acc = ifelse(work_acc == 1, "yes", "no"),
+         promoted_last_5yrs = ifelse(promoted_last_5yrs == 1, "yes", "no"),
+         salary = factor(salary, levels = c("low", "medium", "high"), ordered = T))
+str(emp_churn)
+```
+
+---
+
+#### Let us check the distributions of the following dimensions:
+
+  1. `satisfaction_level`
+  2. `last_evaluation`
+  3. `number_project`
+  4. `average_montly_hours`
+  5. `time_spend_company`
+
+#### 1. Statisfaction level
+
+```{r echo=FALSE, fig.align="center", fig.cap="Figure: Distribution of satisfaction_level.", message=FALSE, warning=FALSE}
+
+# ploting the distribution of satisfaction levels.
+
+ggplot(emp_churn, aes(x = satisfaction_level)) +
+  geom_histogram(bins = 45) +
+  geom_vline(xintercept = mean(emp_churn$satisfaction_level)) +
+  geom_text(aes(x = mean(emp_churn$satisfaction_level),y = 0,label = round(mean(emp_churn$satisfaction_level),2), vjust = 1, hjust = 1), size = 3) + labs(x = "Satisfaction levels", y = "Count of employees") +
+  theme(
+    axis.title.x = element_text(size=10),
+    axis.title.y = element_text(size=10)
+    )
+```
+
+- We see that the average satisfaction level of employees is around __`~ .61`__ or about __`~ 61%`__.
+
+#### 2. Last evaluation
+
+```{r echo=FALSE, fig.align="center", fig.cap="Figure: Distribution of last_evaluation.", message=FALSE, warning=FALSE}
+
+# plotting the distribution of last evaluation of employees
+
+ggplot(emp_churn, aes(x = last_evaluation)) +
+  geom_histogram() +
+  geom_vline(xintercept = mean(emp_churn$last_evaluation)) +
+  geom_text(aes(x = mean(emp_churn$last_evaluation),y = 0,label = round(mean(emp_churn$last_evaluation),2), vjust = 1, hjust = -.5), size = 3) +
+  labs(x = "Last evaluation levels", y = "Count of employees") +
+  theme(
+    axis.title.x = element_text(size=10),
+    axis.title.y = element_text(size=10)
+    )
+```
+
+- Average evaluation of the employees is around __`0.72`__ or about __`~ 72%`__.
+
+#### 3. Number of projects
+
+```{r echo=FALSE, fig.align="center", fig.cap="Figure: Distribution of number_project.", message=FALSE, warning=FALSE}
+
+# number of projects each employee is currently working on or worked on
+
+ggplot(emp_churn, aes(x = number_project)) +
+  geom_histogram(binwidth = 1, color='white') +
+  geom_vline(xintercept = median(emp_churn$number_project)) + 
+  labs(x = "Number of projects worked on", y = "Count of employees") +
+  theme(
+    axis.title.x = element_text(size=10),
+    axis.title.y = element_text(size=10)
+    ) +
+  scale_x_continuous(breaks = seq(0,10,1))
+```
+
+- The median for number_project is `4`, thus dividing our dataset into two parts.
+
+#### 4. Average montly hours
+
+```{r echo=FALSE, fig.align="center", fig.cap="Figure: Distribution of average_montly_hours.", message=FALSE, warning=FALSE}
+
+# plotting the distribution of monthly hours logged in.
+
+ggplot(emp_churn, aes(x = average_montly_hours)) +
+  geom_histogram() +
+  geom_vline(xintercept = mean(emp_churn$average_montly_hours)) +
+  geom_text(aes(x = mean(emp_churn$average_montly_hours),y = 0,label = round(mean(emp_churn$average_montly_hours),2), vjust = 1), size = 3) +
+  labs(x = "Average montly hours", y = "Count of employees") +
+  theme(
+    axis.title.x = element_text(size=10),
+    axis.title.y = element_text(size=10)
+    )
+
+```
+
+- Each employee spends about __`~ 200`__ hours each month, that is exproximately __`8.33`__ hours a day.
+
+#### 5. Time spent in the company
+
+```{r echo=FALSE, fig.align="center", fig.cap="Figure: Distribution of time_spend_company.", message=FALSE, warning=FALSE}
+
+# plotting the distribution of time spent in the organization
+
+ggplot(emp_churn, aes(x = time_spend_company)) +
+  geom_histogram(binwidth = 1, color='white') +
+  geom_vline(xintercept = mean(emp_churn$time_spend_company)) +
+  geom_text(aes(x = mean(emp_churn$time_spend_company),y = 0,label = round(mean(emp_churn$time_spend_company),2), vjust = 1), size = 3) +
+  labs(x = "Time Spend in Company", y = "Number of employees") +
+  theme(
+    axis.title.x = element_text(size=10),
+    axis.title.y = element_text(size=10)
+    )+
+  scale_x_continuous(breaks = seq(0,10,1))
+```
+
+- Employees spend about __`3 ~ 4`__ years on an average in the organization.
+
+#### Let us check how many employees fall under for the following dimensions:
+
+  1. `work_acc`
+  2. `left`
+  3. `promoted_last_5yrs`
+  4. `division`
+  5. `salary`
+  
+#### 1. Number of accidents at work.
+
+```{r echo=FALSE, fig.align="center", fig.cap="Figure: Work accidents.", message=FALSE, warning=FALSE}
+
+# plotting the shape of work accidents
+
+ggplot(emp_churn, aes(x = work_acc)) +
+  geom_bar(width = 0.275) +
+  geom_text(stat = 'count', aes(label = ..count..), hjust = 1, color ='white') +
+  labs(x = "Work accident(s)", y = "Number of employees") +
+  theme(
+    axis.title.x = element_text(size=10),
+    axis.title.y = element_text(size=10)
+    ) +
+  coord_flip()
+```
+
+- we have around 2169 work accidents, that is __`~ 14%`__.
+
+#### 2. Number of people who have left the organization.
+
+```{r echo=FALSE, fig.align="center", fig.cap="Figure: People who have left the organization.", message=FALSE, warning=FALSE}
+
+# plotting the shape of left
+
+ggplot(emp_churn, aes(x = left)) +
+  geom_bar(width = 0.275) +
+  geom_text(stat = 'count', aes(label = ..count..), hjust = 1, color ='white') +
+  labs(x = "Have left the organization?", y = "Number of employees") +
+  theme(
+    axis.title.x = element_text(size=10),
+    axis.title.y = element_text(size=10)
+    ) +
+  coord_flip()
+```
+
+- about __`3571`__ employees are no longer associated with the organinzation.
+
+#### 3. How many employees have been promoted in last five years in the organization.
+
+```{r echo=FALSE, fig.align="center", fig.cap="Figure: Promotions in last five years.", message=FALSE, warning=FALSE}
+
+# plotting the shape of promotions in last five years
+
+ggplot(emp_churn, aes(x = promoted_last_5yrs)) +
+  geom_bar(width = 0.275) +
+  geom_text(stat = 'count', aes(label = ..count..), vjust = 0) +
+  labs(x = "Have been promoted?", y = "Number of employees") +
+  theme(
+    axis.title.x = element_text(size=10),
+    axis.title.y = element_text(size=10)
+    )
+```
+
+- out of 14999 employees only __`319`__ have been promoted in the last five years; that is, __`~ 2%`__ of the total employees in the dataset.
+
+#### 4. How many employees belong to the same division in the organization.
+
+```{r echo=FALSE, fig.align="center", fig.cap="Figure: Divisions in the organization.", message=FALSE, warning=FALSE}
+
+# plotting the shape of divisions
+
+ggplot(emp_churn, aes(x = division)) +
+  geom_bar() +
+   geom_text(stat = 'count', aes(label = ..count..), hjust = 1, color ='white') +
+  labs(x = "Divisions", y = "Number of employees") +
+  theme(
+    axis.title.x = element_text(size=10),
+    axis.title.y = element_text(size=10),
+    ) +
+  coord_flip()
+```
+
+- we see that, the division __`sales`__ has most of the employees, followed by __`technical`__ and __`support`__ divisions.
+
+#### 5. How many of them belong to same pay-grade in the organization.
+
+```{r echo=FALSE, fig.align="center", fig.cap="Figure: People of same pay-grade.", message=FALSE, warning=FALSE}
+
+# plotting the shape of pay grades
+
+ggplot(emp_churn, aes(x = salary)) +
+  geom_bar(width = .275) +
+  geom_text(stat = 'count', aes(label = ..count..), hjust = 1, color = 'white') +
+  labs(x = "Pay grades of the Organization", y = "Number of employees") +
+  theme(
+    axis.title.x = element_text(size=10),
+    axis.title.y = element_text(size=10)
+    ) +
+  coord_flip()
+```
+
+- Majority of the employees have __`low`__ pay grade, can this be the reason for attrition in this organization.
+
+---
+
+# Level - II Analysis
+
+- We have explored the dataset and we have found that our target variable for further analysis is __`left`__, thus leaving us with following questions:
+
+#### Does the organization need to worry about percentage churn in employment?
+
+- to answer the above the question, let us plot a `pie chart` and see the significance.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.align="center", fig.width=5, fig.height=3, fig.cap="Figure: % churn in employment.", per_churn}
+
+theme_set(theme_classic())
+
+per_churn <- emp_churn %>% 
+  group_by(left) %>%
+  count() %>%
+  ungroup() %>% 
+  mutate(per=`n`/sum(`n`)) %>% 
+  arrange(desc(left))
+
+per_churn$label <- scales::percent(per_churn$per)
+
+ggplot(data=per_churn)+
+  geom_bar(aes(x="", y=per, fill=left), stat="identity",
+           width = 1,
+           size = 0.5,
+           alpha = 0.5)+
+  coord_polar("y", start=0)+
+  theme_void()+
+  geom_text(aes(x=1, y = cumsum(per) - per/2, label=label), size = 3)
+```
+  
+- from the chart we can infer that about __`~25%`__ of the total employees, have left the company.
+
+#### So, the next question here is that - does the percentage churn belong to a particular division or is it organization-wide?
+
+- plotting a stacked column will answer the above question.
+
+```{r division_churn, echo=FALSE, fig.align="center", fig.cap="Figure: Churn in each division", fig.height=5, fig.width=7, message=FALSE, warning=FALSE}
+
+# removing per_churn tbl as it is no longer used.
+
+rm(per_churn)
+
+# getting the count of employees in each division
+
+ggplot(emp_churn, aes(x = division, fill = left)) +
+  geom_bar(width = 0.85,
+           size = 0.5,
+           alpha = 0.5) +
+  geom_text(stat = 'count', aes(label = ..count..), size = 3, position = position_stack(vjust = .5)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "Divisions", y = "Number of employees")
+```
+
+- from the above chart we can conclude that the `sales` division has lost most of it employees, but is this true?. 
+- let us plot a 100% stacked column of `left` over `division`, to see if there is a problem in `sales` division.
+
+```{r per_division_churn, echo=FALSE, fig.align="center", fig.cap="Figure: Percentage churn in each division", fig.height=5, fig.width=7, message=FALSE, warning=FALSE}
+
+# calculating the % chrun in each division
+
+by_division <- emp_churn %>%
+  select(division, left) %>%
+  group_by(division, left) %>%
+  summarise(tot_emp_div = n()) %>%
+  mutate(per_div = round(((tot_emp_div / sum(tot_emp_div))*100), digits = 2))
+
+ggplot(data = by_division, aes(x = division,
+                                              y = per_div,
+                                              fill = left)) +
+  geom_bar(stat = "identity",
+           position = "fill",
+           width = 0.85,
+           size = 0.5,
+           alpha = 0.5) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "Divisions", y = "% left") + 
+  geom_text(aes(label = per_div),
+            position = position_fill(vjust = 0.5),
+            size =3)+ 
+  scale_y_continuous(labels = scales::percent)
+
+```
+
+- we can see that the stacked column of absolute numbers is misleading, as there is an unifrom percent of churn in each department, thus __making a problem at an organizational level__.
+
+---
+
+# Level - III Analysis
+
+- As the problem is organization-wide, by looking at the names of columns/dimensions of our dataset, two fields standout:
+  - `satisfaction_level` : determines how happy a employee is with the company.
+  - `last_evaluation` : determines the employees' performace over a period.
+- This raises the following question.
+
+#### Who has left?
+
+- Given that we have various types of performers in an organization, we will use the above fields/dimensions to carry out further analysis.
+- A scatterplot between the two would give us an idea about the correlation between the two variables.
+
+```{r echo=FALSE, fig.align="center", fig.cap="Figure: Identifying clustures for satisfaction levels vs last evaluations", message=FALSE, warning=FALSE}
+
+# remvoing by_division tbl as it is no longer used.
+
+rm(by_division)
+
+# selecting the data for employees how have left the org.
+
+who_has_left <- emp_churn %>%
+  filter(left == "yes")
+
+ggplot(who_has_left, aes(x = last_evaluation, y = satisfaction_level)) +
+  geom_point() +
+  coord_flip() +
+  labs(x = "last evalution", y = "satisfaction level") +
+  theme(
+    axis.title.x = element_text(size=10),
+    axis.title.y = element_text(size=10)
+    )
+
+```
+
+- By looking the polt we can see that, there are three distinct clustures that have been formed, let us name these clustures.
+  - statisfaction level `[0.25, 0.50]` and last evaluation `[0.20, 0.60]`: `Bad Fit`.
+  - statisfaction level `[0.00, 0.20]` and last evaluation `[0.60, 1.0]`: `Unfulfilled`.
+  - statisfaction level `[0.50, 1.0]` and last evaluation `[0.60, 1.0]`: `Best Fit`.
+  - Note: __`[]`__ represent the use of closed intervals.
+
+- Let us add these employee types to our dataset and carry out futher analysis on the these employee types.
+
+```{r clust_2, echo=FALSE, fig.align="center", fig.cap="Figure: Clustures for satisfaction levels vs last evaluations by employee type.", message=FALSE, warning=FALSE}
+
+# defining the conditions based on the above observations.
+
+c1 <- (who_has_left$satisfaction_level <= 0.60 & who_has_left$last_evaluation <= 0.60)
+
+c2 <- (who_has_left$satisfaction_level <= 0.20 & who_has_left$last_evaluation >= 0.70)
+
+c3 <- (who_has_left$satisfaction_level >= 0.70 & who_has_left$last_evaluation >= 0.70)
+
+who_has_left <- who_has_left %>%
+  mutate(emp_type = ifelse(c1, "bad fit", ifelse(c2, "unfulfilled",
+                                                 ifelse(c3, "best fit",
+                                                        NA)))
+         )
+# dropping NA values
+who_has_left <- who_has_left[complete.cases(who_has_left$emp_type),]
+
+# replotting the clusture
+
+ggplot(who_has_left, aes(x = last_evaluation, y = satisfaction_level,
+                         color = emp_type)) +
+  geom_point(size = 2) +
+  labs(x = "last evalution", y = "satisfaction level",
+       color = "employee type") +
+  geom_encircle()
+```
+
+#### Do these three employee types contribute to attrition in specific division or it is organization-wide?
+
+```{r emp_type_org_1, echo=FALSE, fig.align="center", fig.cap="Figure: Employee types in each division", fig.height=5, fig.width=7, message=FALSE, warning=FALSE, paged.print=FALSE}
+
+# plotting a stacked bar/column chart to answer the question
+
+ggplot(who_has_left, aes(x = division, fill = emp_type)) +
+  geom_bar(width = 0.85,
+           size = 0.5,
+           alpha = 0.5) +
+  geom_text(stat = 'count', aes(label = ..count..), size = 3, position = position_stack(vjust = .5)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "Divisions", y = "Number of employees", label = "Employee Type")
+
+```
+
+- Again, we see that, the division __`sales`__, followed by __`support`__ and __`technical`__ has the highest attrition level for each employee type, but is this true?
+- Plotting the 100% stacked chart for the above question.
+
+```{r emp_type_org_2, echo=FALSE, fig.align="center", fig.cap="Figure: % Employee types in each division", fig.height=5, fig.width=7, message=FALSE, warning=FALSE, paged.print=FALSE}
+
+# plotting a 100% stacked bar/column chart to answer the question
+
+# calculating the % chrun in each division
+
+who_has_left_1 <- who_has_left %>%
+  select(division, emp_type) %>%
+  group_by(division, emp_type) %>%
+  summarise(tot_emp_div = n()) %>%
+  mutate(per_emp_div = round(((tot_emp_div / sum(tot_emp_div))*100), digits = 2))
+
+ggplot(data = who_has_left_1, aes(x = division,
+                                              y = per_emp_div,
+                                              fill = emp_type)) +
+  geom_bar(stat = "identity",
+           position = "fill",
+           width = 0.85,
+           size = 0.5,
+           alpha = 0.5) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "Divisions", y = "% Employee type") + 
+  geom_text(aes(label = per_emp_div),
+            position = position_fill(vjust = 0.5),
+            size =3) +
+  scale_y_continuous(labels = scales::percent)
+
+```
+
+- We can conclude that, there is no specific employee type that is contributing to attrition in divisions; that is, attrition of employee types in each division is the same.
+  - `bad fit`: __40% - 55%__
+  - `good fit`: __20% - 35%__
+  - `unfulfilled`: __20% - 34%__
+
+#### As we have identified the following employee types in this organization, let us explore each of the three employee types; that is, why did they leave the organization?
+
+#### Plotting the following graphs will reveal why these employee types have left the organization.
+
+1. Distribution of Average monthly hours.
+2. Promotions in last five years
+3. Pay grade
+4. Work accidents
+5. Number of projects that were worked on.
+6. Tenure of the employment
+
+#### 1. Analysis for Employee type - `Unfulfilled`.
+
+1. Distribution of Average monthly hours.
+
+```{r unful_1, echo=FALSE, fig.align="center", fig.cap="Figure: How many hours do unfulfilled people work?", message=FALSE, warning=FALSE, paged.print=FALSE}
+
+# removing who_has_left_1, as it is no longer needed
+rm(who_has_left_1)
+
+# selecting data for unfulfilled people
+unful_data <- who_has_left %>%
+  filter(emp_type == "unfulfilled")
+
+ggplot(unful_data, aes(x = unful_data$average_montly_hours)) +
+  geom_histogram() +
+  geom_vline(xintercept = mean(unful_data$average_montly_hours)) +
+ geom_text(aes(x = mean(unful_data$average_montly_hours),y = 0,label = round(mean(unful_data$average_montly_hours),2), vjust = 1, hjust = 1), size = 3) + labs(x = "Average monthly working hours of Unfulfilled employees", y = "Count") +
+ theme(
+   axis.title.x = element_text(size=10),
+   axis.title.y = element_text(size=10)
+   )
+```
+
+2. Promotions in last five years
+
+```{r unful_2, echo = FALSE, fig.align="center", fig.cap="Figure: How many unfulfilled people at work get promoted?", fig.height=3, fig.width=5, message=FALSE, warning=FALSE, paged.print=FALSE}
+
+ggplot(unful_data, aes(x = promoted_last_5yrs)) +
+  geom_bar(width = .275) +
+  geom_text(stat = 'count', aes(label = ..count..), vjust = 0) +
+  labs(x = "Have been promoted?", y = "Number of employees") +
+  theme(
+    axis.title.x = element_text(size=10),
+    axis.title.y = element_text(size=10)
+    )
+```
+
+3. Pay grade
+
+```{r unful_3, echo = FALSE, fig.align="center", fig.cap="Figure: To which pay grade do unfulfilled people belong?", fig.height=3, fig.width=5, message=FALSE, warning=FALSE, paged.print=FALSE}
+
+# plotting the shape of pay grades
+
+ggplot(unful_data, aes(x = salary)) +
+  geom_bar(width = .275) +
+  geom_text(stat = 'count', aes(label = ..count..), vjust = 0) +
+  labs(x = "Pay grades of the Organization", y = "Number of employees") +
+  theme(
+    axis.title.x = element_text(size=10),
+    axis.title.y = element_text(size=10)
+    )
+```
+
+4. Work accidents
+
+```{r unful_4, echo = FALSE, fig.align="center", fig.cap="Figure: How many work accident were unfulfilled people involved in?", fig.height=3, fig.width=5, message=FALSE, warning=FALSE, paged.print=FALSE}
+
+# plotting the shape of work accidents
+
+ggplot(unful_data, aes(x = work_acc)) +
+  geom_bar(width = .275) +
+  geom_text(stat = 'count', aes(label = ..count..), vjust = 0) +
+  labs(x = "Work accident(s)", y = "Number of employees") +
+  theme(
+    axis.title.x = element_text(size=10),
+    axis.title.y = element_text(size=10)
+    )
+```
+
+5. Number of projects that were worked on.
+
+```{r unful_5, echo = FALSE, fig.align="center", fig.cap="Figure: How many projects did unfulfilled people work at?", fig.height=3, fig.width=5, message=FALSE, warning=FALSE, paged.print=FALSE}
+
+# number of projects each employee is currently working on or worked on
+
+ggplot(unful_data, aes(x = number_project)) +
+  geom_bar(width = .275) +
+  labs(x = "Number of projects worked on", y = "Count of employees") +
+  theme(
+    axis.title.x = element_text(size=10),
+    axis.title.y = element_text(size=10)
+    )
+```
+
+6. Tenure of employment
+
+```{r unful_6, echo = FALSE, fig.align="center", fig.cap="Figure: How long do  unfulfilled people stay with the organization?", fig.height=3, fig.width=5, message=FALSE, warning=FALSE, paged.print=FALSE}
+
+# number of projects each employee is currently working on or worked on
+
+ggplot(unful_data, aes(x = unful_data$time_spend_company)) +
+  geom_histogram(binwidth = 1, color='white') +
+  geom_vline(xintercept = mean(unful_data$time_spend_company)) +
+  labs(x = "Number of projects worked on", y = "Count of employees") +
+  geom_text(aes(x = mean(unful_data$time_spend_company),y = 0,label = round(mean(unful_data$time_spend_company),2), vjust = 1), size = 3) +
+  theme(
+    axis.title.x = element_text(size=10),
+    axis.title.y = element_text(size=10)
+    )
+```
+
+#### Conclusions for Unfulfilled employees.
+
+- These people have put in alot of effort and are requested/required to work for approxmately __`276 hours`__ a month; i.e., approximately __`276/24 ~= 11.5 hours/day`__.
+- They are paid very less, and are asked to work on __`6 ~ 7`__ project at a time, for which they are appricated and not promoted.
+- 4% `(41/900)` of the people leave because of work accidents.
+- They stay for approximately __`4 years`__ before they leave the company.
+
+---
+
+#### 2. Analysis for Employee type - `Good Fit`.
+
+1. Distribution of Average monthly hours.
+
+```{r best_1, echo=FALSE, fig.align="center", fig.cap="Figure: How many hours do best fit people work?", message=FALSE, warning=FALSE, paged.print=FALSE}
+
+# selecting data for unfulfilled people
+best_data <- who_has_left %>%
+  filter(emp_type == "best fit")
+
+ggplot(best_data, aes(x = best_data$average_montly_hours)) +
+  geom_histogram() +
+  geom_vline(xintercept = mean(best_data$average_montly_hours)) +
+ geom_text(aes(x = mean(best_data$average_montly_hours),y = 0,label = round(mean(best_data$average_montly_hours),2), vjust = 1, hjust = 1), size = 3) + labs(x = "Average monthly working hours of Best fit employees", y = "Count") +
+ theme(
+   axis.title.x = element_text(size=10),
+   axis.title.y = element_text(size=10)
+   )
+```
+
+2. Promotions in last five years
+
+```{r best_2, echo=FALSE, fig.align="center", fig.cap="Figure: How many best fit people at work get promoted?", message=FALSE, warning=FALSE, paged.print=FALSE}
+
+ggplot(best_data, aes(x = promoted_last_5yrs)) +
+  geom_bar(width = .25) +
+  geom_text(stat = 'count', aes(label = ..count..), vjust = 0) +
+  labs(x = "Have been promoted?", y = "Number of employees") +
+  theme(
+    axis.title.x = element_text(size=10),
+    axis.title.y = element_text(size=10)
+    )
+```
+
+3. Pay grade
+
+```{r best_3, echo = FALSE, fig.align="center", fig.cap="Figure: To which pay grade do best fit people belong?", fig.height=3, fig.width=5, message=FALSE, warning=FALSE, paged.print=FALSE}
+
+# plotting the shape of pay grades
+
+ggplot(best_data, aes(x = salary)) +
+  geom_bar(width = .25) +
+  geom_text(stat = 'count', aes(label = ..count..), vjust = 0) +
+  labs(x = "Pay grades of the Organization", y = "Number of employees") +
+  theme(
+    axis.title.x = element_text(size=10),
+    axis.title.y = element_text(size=10)
+    )
+```
+
+4. Work accidents
+
+```{r best_4, echo = FALSE, fig.align="center", fig.cap="Figure: How many work accident were best fit people involved in?", fig.height=3, fig.width=5, message=FALSE, warning=FALSE, paged.print=FALSE}
+
+# plotting the shape of work accidents
+
+ggplot(best_data, aes(x = work_acc)) +
+  geom_bar(width = .275) +
+  geom_text(stat = 'count', aes(label = ..count..), vjust = 0) +
+  labs(x = "Work accident(s)", y = "Number of employees") +
+  theme(
+    axis.title.x = element_text(size=10),
+    axis.title.y = element_text(size=10)
+    )
+```
+
+5. Number of projects that were worked on.
+
+```{r best_5, echo = FALSE, fig.align="center", fig.cap="Figure: How many projects did best fit people work at?", fig.height=3, fig.width=5, message=FALSE, warning=FALSE, paged.print=FALSE}
+
+# number of projects each employee is currently working on or worked on
+
+ggplot(best_data, aes(x = number_project)) +
+  geom_bar(width = 0.5) +
+  labs(x = "Number of projects worked on", y = "Count of employees") +
+  theme(
+    axis.title.x = element_text(size=10),
+    axis.title.y = element_text(size=10)
+    )
+```
+
+6. Tenure of employment
+
+```{r best_6, echo=FALSE, fig.align="center", fig.cap="Figure: How long do  best fit people stay with the organization?", message=FALSE, warning=FALSE, paged.print=FALSE}
+
+# number of projects each employee is currently working on or worked on
+
+ggplot(best_data, aes(x = best_data$time_spend_company)) +
+  geom_histogram(binwidth = 1, color = "white") +
+  geom_vline(xintercept = mean(best_data$time_spend_company)) +
+  labs(x = "Number of projects worked on", y = "Count of employees") +
+  geom_text(aes(x = mean(best_data$time_spend_company),y = 0,label = round(mean(best_data$time_spend_company),2), vjust = 1), size = 3) +
+  theme(
+    axis.title.x = element_text(size=10),
+    axis.title.y = element_text(size=10)
+    )
+```
+
+#### Conclusions for Best fit people
+
+- These people have put in alot of effort and are requested/required to work for approxmately __`245 hours`__ a month; i.e., approximately __`245/24 ~= 10 hours/day`__.
+- They are paid very less, and are asked to work on __`5`__ project at a time, for which they are appricated and not promoted.
+- 5% `(41/900)` of the people leave because of work accidents.
+- They stay for approximately __`5 years`__ before they leave the company.
+
+---
+
+#### 3. Analysis for Employee type - `Bad Fit`.
+
+1. Distribution of Average monthly hours.
+
+```{r bad_1, echo=FALSE, fig.align="center", fig.cap="Figure: How many hours do bad fit people work?", message=FALSE, warning=FALSE, paged.print=FALSE}
+
+# selecting data for bad fit people
+bad_data <- who_has_left %>%
+  filter(emp_type == "bad fit")
+
+ggplot(bad_data, aes(x = bad_data$average_montly_hours)) +
+  geom_histogram() +
+  geom_vline(xintercept = mean(bad_data$average_montly_hours)) +
+ geom_text(aes(x = mean(bad_data$average_montly_hours),y = 0,label = round(mean(bad_data$average_montly_hours),2), vjust = 1, hjust = 1), size = 3) + labs(x = "Average monthly working hours of bad fit employees", y = "Count") +
+ theme(
+   axis.title.x = element_text(size=10),
+   axis.title.y = element_text(size=10)
+   )
+```
+
+2. Promotions in last five years
+
+```{r bad_2, echo=FALSE, fig.align="center", fig.cap="Figure: How many bad fit people at work get promoted?", message=FALSE, warning=FALSE, paged.print=FALSE}
+
+ggplot(bad_data, aes(x = promoted_last_5yrs)) +
+  geom_bar(width = .275) +
+  geom_text(stat = 'count', aes(label = ..count..), vjust = 0) +
+  labs(x = "Have been promoted?", y = "Number of employees") +
+  theme(
+    axis.title.x = element_text(size=10),
+    axis.title.y = element_text(size=10)
+    )
+```
+
+3. Pay grade
+
+```{r bad_3, echo = FALSE, fig.align="center", fig.cap="Figure: To which pay grade do bad fit people belong?", fig.height=3, fig.width=5, message=FALSE, warning=FALSE, paged.print=FALSE}
+
+# plotting the shape of pay grades
+
+ggplot(bad_data, aes(x = salary)) +
+  geom_bar(width = .275) +
+  geom_text(stat = 'count', aes(label = ..count..), vjust = 0) +
+  labs(x = "Pay grades of the Organization", y = "Number of employees") +
+  theme(
+    axis.title.x = element_text(size=10),
+    axis.title.y = element_text(size=10)
+    )
+```
+
+4. Work accidents
+
+```{r bad_4, echo = FALSE, fig.align="center", fig.cap="Figure: How many work accident were bad fit people involved in?", fig.height=3, fig.width=5, message=FALSE, warning=FALSE, paged.print=FALSE}
+
+# plotting the shape of work accidents
+
+ggplot(bad_data, aes(x = work_acc)) +
+  geom_bar(width = .275) +
+  geom_text(stat = 'count', aes(label = ..count..), vjust = 0) +
+  labs(x = "Work accident(s)", y = "Number of employees") +
+  theme(
+    axis.title.x = element_text(size=10),
+    axis.title.y = element_text(size=10)
+    )
+```
+
+5. Number of projects that were worked on.
+
+```{r bad_5, echo = FALSE, fig.align="center", fig.cap="Figure: How many projects did unfulfilled people work at?", fig.height=3, fig.width=5, message=FALSE, warning=FALSE, paged.print=FALSE}
+
+# number of projects each employee is currently working on or worked on
+
+ggplot(bad_data, aes(x = number_project)) +
+  geom_bar() +
+  labs(x = "Number of projects worked on", y = "Count of employees") +
+  theme(
+    axis.title.x = element_text(size=10),
+    axis.title.y = element_text(size=10)
+    )
+```
+
+6. Tenure of employment
+
+```{r bad_6, echo = FALSE, fig.align="center", fig.cap="Figure: How long do  bad fit people stay with the organization?", fig.height=3, fig.width=5, message=FALSE, warning=FALSE, paged.print=FALSE}
+
+# number of projects each employee is currently working on or worked on
+
+ggplot(bad_data, aes(x = bad_data$time_spend_company)) +
+  geom_histogram(binwidth = 1, color='white') +
+  geom_vline(xintercept = mean(bad_data$time_spend_company)) +
+  labs(x = "Number of projects worked on", y = "Count of employees") +
+  geom_text(aes(x = mean(bad_data$time_spend_company),y = 0,label = round(mean(bad_data$time_spend_company),2), vjust = 1), size = 3) +
+  theme(
+    axis.title.x = element_text(size=10),
+    axis.title.y = element_text(size=10)
+    )
+```
+
+#### Conclusions for Bad fit people
+
+- These people put in minimal effort and are requested/required to work for approxmately __`148 hours`__ a month; i.e., approximately __`148/24 ~= 6.6 hours/day`__.
+- They are paid very less, and are asked to work on atmost __`2`__ project at a time.
+- 4% `(74/1585)` of the people leave because of work accidents.
+- They stay for approximately __`3 years`__ before they leave the company.
+
+---
+
+# Final plots and Summary
+
+#### Plot 1: Distribution of Average mothly working hours for each employee type.
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE, echo = FALSE, fig.cap="Figure: Plot 1: Distribution of Average mothly working hours by employee type"}
+
+avg_mm <- who_has_left %>%
+  group_by(emp_type) %>%
+  summarise(avg_avg_mm = mean(average_montly_hours),
+            lab = paste("mean  =  ", round(mean(average_montly_hours),0)))
+
+ggplot(who_has_left, aes(x=who_has_left$average_montly_hours)) +
+  geom_histogram(binwidth = 10) +
+  geom_vline(aes(xintercept = avg_avg_mm), avg_mm, size = 1) +
+  facet_wrap(~ emp_type) +
+  theme_bw() +
+  labs(x = "Averge of monthly working hours", y = "Number of employees") +
+  geom_text(data = avg_mm, aes(x = 225, y = 175, label = lab), size = 3)
+```
+
+- As we are aware the time logged in each employee is in the order of bad fit < best fit < unfulfilled.
+
+#### Plot 2: Pay grade of each employee type.
+
+```{r echo=FALSE, fig.cap="Figure: Pay grade in the organization", fig.height=5, fig.width=7, message=FALSE, warning=FALSE, paged.print=FALSE}
+
+ggplot(who_has_left, aes(x=who_has_left$emp_type, y = ..count.., fill = salary)) +
+  geom_bar(width = .275) +
+  labs(x = "Employee type", y = "Number of employees") +
+  geom_text(stat = 'count', aes(label = ..count..), size = 3, position = position_stack(vjust = .5)) +
+  scale_fill_manual(values = c("low" = "lightgreen", "medium" = "lightblue", "high" = "lightpink"))
+```
+
+- A major chunk of employees belong to same pay grade - `low`, and the order of their appearence is unfulfilled < best fit < bad fit.
+
+#### Plot 3: Average number of projects worked on by each of the employee type.
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE, echo = FALSE, fig.cap="Figure: Plot 2: Average number of project worked on"}
+
+me_pro <- who_has_left %>%
+  group_by(emp_type) %>%
+  summarise(me_proj = mean(number_project),
+            lab = paste("mean  =  ", round(mean(number_project), 1)))
+
+ggplot(who_has_left, aes(x=who_has_left$number_project)) +
+  geom_histogram(binwidth = .75) +
+  geom_vline(aes(xintercept = me_proj), me_pro, size = 1) +
+  facet_wrap(~ emp_type) +
+  theme_bw() +
+  geom_text(data = me_pro, aes(x = 4.5, y = 400, label = lab), size = 3) +
+  labs(x = "Number of projects worked on", y = "Number of employees")
+```
+
+- We can see that, bad fit people are rarely engaged on projects, but the organization depends on the best fit and unfulfilled people to handle major chunk of projects.
+
+---
+
+# Reflections
+
+- After digging this deep, I can conclude the following,
+  1. If there is no __work-life balance__: i.e., if employees are __`too engaged`__ or if they are __`not too engaged`__, people *leave*.
+  2. If there are no promotions at right time, employees *leave*.
+  3. `Pay grade` is the major factor that has caused about `25%` of employment churn in this orgainization.
+  4. On an average `4.5%` of the total employees leave because of work accidents.
+- The main challenge while performing EDA on this dataset was, I was concluding based on aboslute numbers rather than on percentages, which lead to wrong interpretations and conclusions on the dataset.
+- Another challegne that I had faced was the tidiness of the dataset, it is so clean and and the quality of the data, which made the process of finding patterns and insights very difficult.
+- Further course of action on this dataset, would be to build predictor models for percentage employment churn; i.e., using the machine learning models/techniques to build and predict what are the causes for employment churn, based on the variables available.
+- Another set of action, that can be done, is to use the Hypotheses Testing methods to find the correlations between two categorical variables.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+# clearing the environment
+rm(list = ls())
+```
+
